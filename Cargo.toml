@@ -2,5 +2,6 @@
 name = "chip8_core"
 version = "0.1.0"
 edition = "2024"
+cargo add rand
 
 [dependencies]
