@@ -43,7 +43,7 @@ pub enum Instruction<D, A> {
     JumpV0(A),
     Rand(usize, D),
     /// Dxyb - DRW Vx, Vy, nibble: Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
-    DrawSprite(),
+    DrawSprite(usize, usize, usize),
     SkipIfKeyPressed(usize),
     SkipIfKeyNotPressed(usize),
     SetRDt(usize),
@@ -68,7 +68,7 @@ impl Instruction<u8, u16> {
                 0x00 => Instruction::Nop,
                 0xE0 => Instruction::ClearScreen,
                 0xEE => Instruction::Return,
-                _ => unimplemented!("Unimplemented opcode: {}", op),
+                _ => unimplemented!("No instruction for opcode: {}", op),
             },
             0x1 => Instruction::Jump(op & 0xFFF),
             0x2 => Instruction::Call(op & 0xFFF),
@@ -78,7 +78,7 @@ impl Instruction<u8, u16> {
                 0x0 => {
                     Instruction::SkipIfR(((op & 0xF00) >> 8) as usize, ((op & 0xF0) >> 4) as usize)
                 }
-                _ => unimplemented!("Unimplemented opcode: {}", op),
+                _ => unimplemented!("No instruction for opcode: {}", op),
             },
             0x6 => Instruction::AsignI(((op & 0xF00) >> 8) as usize, (op & 0xFF) as u8),
             0x7 => Instruction::AddI(((op & 0xF00) >> 8) as usize, (op & 0xFF) as u8),
@@ -96,18 +96,47 @@ impl Instruction<u8, u16> {
                 0x3 => unimplemented!("Unimplemented opcode: {}", op),
                 0x4 => Instruction::AddR(((op & 0xF00) >> 8) as usize, ((op & 0xF0) >> 4) as usize),
                 0x5 => Instruction::SubR(((op & 0xF00) >> 8) as usize, ((op & 0xF0) >> 4) as usize),
-                0x6 => unimplemented!("Unimplemented opcode: {}", op),
-                0x7 => unimplemented!("Unimplemented opcode: {}", op),
-                0xE => unimplemented!("Unimplemented opcode: {}", op),
-                _ => unimplemented!("Unimplemented opcode: {}", op),
+                0x6 => Instruction::SRL(((op & 0xF00) >> 8) as usize, ((op & 0xF0) >> 4) as usize),
+                0x7 => Instruction::SubRReversed(
+                    ((op & 0xF00) >> 8) as usize,
+                    ((op & 0xF0) >> 4) as usize,
+                ),
+                0xE => Instruction::SLL(((op & 0xF00) >> 8) as usize, ((op & 0xF0) >> 4) as usize),
+                _ => unimplemented!("No instruction for opcode: {}", op),
             },
-            // 0x9
-            // 0xA
-            // 0xC
-            // 0xD
-            // 0xE
-            // 0xF
-            _ => unimplemented!("Unimplemented opcode: {}", op),
+            0x9 => match op & 0xF {
+                0x0 => Instruction::SkipIfNotR(
+                    ((op & 0xF00) >> 8) as usize,
+                    ((op & 0xF0) >> 4) as usize,
+                ),
+                _ => unimplemented!("No instruction for opcode: {}", op),
+            },
+            0xA => Instruction::IRegAsign(op & 0xFFF),
+            0xB => Instruction::JumpV0(op & 0xFFF),
+            0xC => Instruction::Rand(((op & 0xF00) >> 8) as usize, (op & 0xFF) as u8),
+            0xD => Instruction::DrawSprite(
+                ((op & 0xF00) >> 8) as usize,
+                ((op & 0xF0) >> 4) as usize,
+                (op & 0xF) as usize,
+            ),
+            0xE => match op & 0x00FF {
+                0x9E => Instruction::SkipIfKeyPressed(((op & 0xF00) >> 8) as usize),
+                0xA1 => Instruction::SkipIfKeyNotPressed(((op & 0xF00) >> 8) as usize),
+                _ => unimplemented!("No instruction for opcode: {}", op),
+            },
+            0xF => match op & 0x00FF {
+                0x07 => Instruction::SetRDt(((op & 0xF00) >> 8) as usize),
+                0x0A => Instruction::WaitKeyPress(((op & 0xF00) >> 8) as usize),
+                0x15 => Instruction::SetDtR(((op & 0xF00) >> 8) as usize),
+                0x18 => Instruction::SetStR(((op & 0xF00) >> 8) as usize),
+                0x1E => Instruction::IRegAddR(((op & 0xF00) >> 8) as usize),
+                0x29 => Instruction::IFontAddress(((op & 0xF00) >> 8) as usize),
+                0x33 => Instruction::IBCD(((op & 0xF00) >> 8) as usize),
+                0x55 => Instruction::StoreRtoI(((op & 0xF00) >> 8) as usize),
+                0x65 => Instruction::LoadItoR(((op & 0xF00) >> 8) as usize),
+                _ => unimplemented!("No instruction for opcode: {}", op),
+            },
+            _ => unimplemented!("No instruction for opcode: {}", op),
         }
     }
 
